@@ -8,7 +8,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { emitSocketEvent } from "../socket/index.js";
 import { removeLocalFile } from "../utils/helper.js";
 import { ChatEventEnum } from "../constants.js";
-import { pipeline } from "stream";
+import client from "../redis/client.js";
+
 
 const chatMessageCommonAggregation = () => {
   return [
@@ -86,7 +87,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   const { chatId } = req.params;
   const { content } = req.body;
 
-  console.log("message content:", content);
+
 
   if (!content && !req.files?.attachments?.length) {
     throw new ApiError(400, "content or attachments are required");
@@ -107,7 +108,7 @@ const sendMessage = asyncHandler(async (req, res) => {
       });
     });
   }
-
+ 
   // Create the message instance with metadata
   const message = await ChatMessage.create({
     sender: new mongoose.Types.ObjectId(req.user._id),
@@ -143,10 +144,9 @@ const sendMessage = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Internal server error");
   }
 
+  await client.publish(`chat_${chatId}`,JSON.stringify(receivedMessage))
   // Emit socket event to all participaints except sender
-  console.log("the participaints in the rooms:", chat.participaints);
-
-  if (chat.participaints?.length) {
+    if (chat.participaints?.length) {
     chat.participaints.forEach((participantObjectId) => {
       if (participantObjectId.toString() === req.user._id.toString()) return;
       emitSocketEvent(
@@ -164,12 +164,6 @@ const sendMessage = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
 });
-
-
-
-
-
-
 
 const deleteMessage = asyncHandler(async (req, res) => {
   const { chatId, messageId } = req.params;

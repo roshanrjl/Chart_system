@@ -16,6 +16,9 @@ import UserRouter from "./routes/user.route.js";
 import messageRouter from "./routes/message.route.js";
 import chatRouter from "./routes/chat.routes.js";
 
+//redis imports
+import startRedisSubscriber from "./redis/redisSubscriber.js";
+
 
 // Load .env vars
 dotenv.config();
@@ -58,8 +61,15 @@ app.use('/api/v1/chart-app/chats', chatRouter);
 app.use('/api/v1/chart-app/messages', messageRouter);
 app.use('/api/v1/chart-app/user', UserRouter);
 
+//start the redis subscriber once
+
+startRedisSubscriber(io)
+
+
 // Initialize socket.io handlers
 initializeSocketIo(io);
+
+
 
 // Export the server
 export { httpServer ,app};
